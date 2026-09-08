@@ -205,6 +205,6 @@ MIT
 ---
 
 *Built for a hackathon. Every destructive action shown is simulated — no real databases were harmed.* 🗑️
-````
+
 
 
