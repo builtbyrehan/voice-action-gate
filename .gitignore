@@ -1,0 +1,6 @@
+my-venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+backend/audit_log.jsonl
