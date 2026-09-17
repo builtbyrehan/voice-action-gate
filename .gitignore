@@ -1,6 +1,9 @@
-my-venv/
 __pycache__/
-*.pyc
+*.py[cod]
 .pytest_cache/
+.venv/
+venv/
 .env
-backend/audit_log.jsonl
+*.db
+.idea/
+.vscode/
