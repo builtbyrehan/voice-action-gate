@@ -84,14 +84,17 @@ For high-risk actions, only `USER_EXPLICIT` authorizes execution.
 ## 🛠️ Tech Stack
 
 - **Backend:** Python, FastAPI, Pydantic
+- **Frontend:** Next.js, React, TypeScript, Tailwind CSS
 - **Gate engine:** Pure deterministic Python — zero LLM, zero network
 - **State:** In-memory sessions (MVP), JSONL audit trail
-- **Tests:** pytest — 24 tests covering every security requirement
-- **Planned:** AssemblyAI realtime voice, LLM structured-output extractor, Next.js live dashboard
+- **Tests:** pytest — 43 tests covering every security requirement
+- **Planned:** AssemblyAI realtime voice, LLM structured-output extractor
 
 ---
 
 ## 🚀 Getting Started
+
+### Backend
 
 ```bash
 git clone https://github.com/builtbyrehan/voice-action-gate.git
@@ -101,12 +104,23 @@ python -m venv my-venv
 my-venv\Scripts\activate        # Windows  (Linux/Mac: source my-venv/bin/activate)
 
 pip install -r requirements.txt
-python -m pytest -v             # 24 tests should pass
+python -m pytest -v             # 43 tests should pass
 
 uvicorn app.main:app --reload --port 8000
 ```
 
 Interactive API docs: **http://localhost:8000/docs**
+
+### Frontend
+
+```bash
+cd voice-action-gate/frontend
+
+npm install
+npm run dev
+```
+
+Dashboard: **http://localhost:3000**
 
 ### Try the full journey
 
@@ -143,24 +157,39 @@ curl -X POST localhost:8000/api/turn -H "Content-Type: application/json" \
 ## 📂 Project Structure
 
 ```
-backend/
-├── app/
-│   ├── main.py              # FastAPI server
-│   ├── schemas.py           # Evidence, gate results, decisions
-│   ├── gate/
-│   │   ├── actions.py       # Action schemas (3 MVP actions)
-│   │   ├── engine.py        # ⭐ THE ACTION GATE (deterministic)
-│   │   └── policy.py        # Confirmation policy
-│   ├── nlu/
-│   │   ├── extractor.py     # Utterance → parameters + quotes
-│   │   ├── verifier.py      # Provenance verification (quote proof)
-│   │   └── catalog.py       # Entity fixtures (databases, apps, envs)
-│   ├── session/
-│   │   ├── state.py         # Conversation state machine
-│   │   └── conversation.py  # Multi-turn turn processor
-│   ├── tools/registry.py    # Simulated tools (only reachable via the Gate)
-│   └── audit/recorder.py    # Audit trail writer
-└── tests/                   # 24 tests — every security requirement covered
+voice-action-gate/
+├── backend/
+│   ├── app/
+│   │   ├── main.py              # FastAPI server
+│   │   ├── schemas.py           # Evidence, gate results, decisions
+│   │   ├── gate/
+│   │   │   ├── actions.py       # Action schemas (3 MVP actions)
+│   │   │   ├── engine.py        # ⭐ THE ACTION GATE (deterministic)
+│   │   │   └── policy.py        # Confirmation policy
+│   │   ├── nlu/
+│   │   │   ├── extractor.py     # Utterance → parameters + quotes
+│   │   │   ├── verifier.py      # Provenance verification (quote proof)
+│   │   │   └── catalog.py       # Entity fixtures (databases, apps, envs)
+│   │   ├── session/
+│   │   │   ├── state.py         # Conversation state machine
+│   │   │   └── conversation.py  # Multi-turn turn processor
+│   │   ├── tools/registry.py    # Simulated tools (only reachable via the Gate)
+│   │   └── audit/recorder.py    # Audit trail writer
+│   └── tests/                   # 43 tests — every security requirement covered
+└── frontend/
+    └── app/
+        ├── page.tsx             # Dashboard main page
+        ├── layout.tsx           # Root layout
+        ├── components/
+        │   ├── ChatInput.tsx    # User input
+        │   ├── ConversationHistory.tsx  # Chat messages
+        │   ├── ParameterTable.tsx  # Parameter evidence display
+        │   ├── GateVisualization.tsx  # Gate check status
+        │   ├── AuditLog.tsx     # Audit trail display
+        │   └── StatusBadge.tsx  # Decision status badge
+        └── lib/
+            ├── api.ts           # API client
+            └── types.ts         # TypeScript types
 ```
 
 **Security by construction:** the tools module has no public route. The only path to execution runs through the Gate.
@@ -189,9 +218,9 @@ backend/
   - [x] Multi-turn conversation + clarification flow
   - [x] Explicit confirmation policy (strict for HIGH risk)
   - [x] Audit trail
+  - [x] Live security dashboard (Next.js)
   - [ ] LLM-based extractor (structured output)
   - [ ] AssemblyAI realtime voice integration
-  - [ ] Live security dashboard (Next.js)
 - **Phase 2 — Developer Platform:** SDK, REST API, custom action schemas, webhooks
 - **Phase 3 — Enterprise:** SSO, RBAC, approval chains, SIEM integration
 - **Phase 4 — Universal Agent Security Layer:** voice, chat, autonomous, computer-use, API agents

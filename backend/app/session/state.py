@@ -4,8 +4,6 @@ from typing import Optional
 from pydantic import BaseModel, Field
 from app.schemas import ConfirmationState, GateResult, ParamEvidence
 
-from app.schemas import ConfirmationState, ParamEvidence
-
 
 class Phase(str, Enum):
     IDLE = "IDLE"                              # waiting for a request
