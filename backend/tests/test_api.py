@@ -1,6 +1,10 @@
 """API endpoint tests using FastAPI TestClient."""
+import tempfile
 from fastapi.testclient import TestClient
+import app.main as main_module
 from app.main import app
+from app.audit.recorder import AuditRecorder
+from app.session.conversation import ConversationTurnProcessor
 
 client = TestClient(app)
 
@@ -23,25 +27,45 @@ def test_list_actions():
 
 
 def test_turn_ambiguous():
-    r = client.post("/api/turn", json={
-        "session_id": "test_ambiguous",
-        "text": "Delete the old database."
-    })
-    assert r.status_code == 200
-    body = r.json()
-    assert body["gate"]["decision"] == "NEEDS_CLARIFICATION"
-    assert "database" in body["gate"]["ambiguous"]
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as tmp:
+        tmp_path = tmp.name
+    orig_audit = main_module.audit
+    orig_proc = main_module.processor
+    try:
+        main_module.audit = AuditRecorder(path=tmp_path)
+        main_module.processor = ConversationTurnProcessor(audit=main_module.audit)
+        r = client.post("/api/turn", json={
+            "session_id": "test_ambiguous",
+            "text": "Delete the old database."
+        })
+        assert r.status_code == 200
+        body = r.json()
+        assert body["gate"]["decision"] == "NEEDS_CLARIFICATION"
+        assert "database" in body["gate"]["ambiguous"]
+    finally:
+        main_module.audit = orig_audit
+        main_module.processor = orig_proc
 
 
 def test_turn_missing_param():
-    r = client.post("/api/turn", json={
-        "session_id": "test_missing",
-        "text": "Delete customer_db."
-    })
-    assert r.status_code == 200
-    body = r.json()
-    assert body["gate"]["decision"] == "NEEDS_CLARIFICATION"
-    assert "environment" in body["gate"]["missing"]
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as tmp:
+        tmp_path = tmp.name
+    orig_audit = main_module.audit
+    orig_proc = main_module.processor
+    try:
+        main_module.audit = AuditRecorder(path=tmp_path)
+        main_module.processor = ConversationTurnProcessor(audit=main_module.audit)
+        r = client.post("/api/turn", json={
+            "session_id": "test_missing",
+            "text": "Delete customer_db."
+        })
+        assert r.status_code == 200
+        body = r.json()
+        assert body["gate"]["decision"] == "NEEDS_CLARIFICATION"
+        assert "environment" in body["gate"]["missing"]
+    finally:
+        main_module.audit = orig_audit
+        main_module.processor = orig_proc
 
 
 def test_gate_check_direct():
@@ -59,30 +83,51 @@ def test_gate_check_direct():
 
 
 def test_audit_log_records_turns():
-    r = client.post("/api/turn", json={
-        "session_id": "test_audit",
-        "text": "Delete customer_db."
-    })
-    assert r.status_code == 200
-    audit = client.get("/api/audit").json()
-    assert any(e["action"] == "DELETE_DATABASE" for e in audit)
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as tmp:
+        tmp_path = tmp.name
+    orig_audit = main_module.audit
+    orig_proc = main_module.processor
+    try:
+        main_module.audit = AuditRecorder(path=tmp_path)
+        main_module.processor = ConversationTurnProcessor(audit=main_module.audit)
+        r = client.post("/api/turn", json={
+            "session_id": "test_audit",
+            "text": "Delete customer_db."
+        })
+        assert r.status_code == 200
+        audit = client.get("/api/audit").json()
+        assert any(e["action"] == "DELETE_DATABASE" for e in audit)
+    finally:
+        main_module.audit = orig_audit
+        main_module.processor = orig_proc
 
 
 def test_full_journey_via_api():
-    sid = "test_full_journey"
-    # Step 1: start action
-    r1 = client.post("/api/turn", json={"session_id": sid, "text": "Delete customer_db."})
-    assert r1.json()["gate"]["decision"] == "NEEDS_CLARIFICATION"
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as tmp:
+        tmp_path = tmp.name
+    orig_audit = main_module.audit
+    orig_proc = main_module.processor
+    orig_sessions = main_module.sessions
+    try:
+        main_module.audit = AuditRecorder(path=tmp_path)
+        main_module.processor = ConversationTurnProcessor(audit=main_module.audit)
+        from app.session.state import SessionManager
+        main_module.sessions = SessionManager()
 
-    # Step 2: provide environment
-    r2 = client.post("/api/turn", json={"session_id": sid, "text": "Production."})
-    assert r2.json()["gate"]["decision"] == "NEEDS_CONFIRMATION"
+        sid = "test_full_journey"
+        r1 = client.post("/api/turn", json={"session_id": sid, "text": "Delete customer_db."})
+        assert r1.json()["gate"]["decision"] == "NEEDS_CLARIFICATION"
 
-    # Step 3: generic ack (should fail for HIGH risk)
-    r3 = client.post("/api/turn", json={"session_id": sid, "text": "Okay."})
-    assert r3.json()["gate"]["decision"] == "NEEDS_CONFIRMATION"
+        r2 = client.post("/api/turn", json={"session_id": sid, "text": "Production."})
+        assert r2.json()["gate"]["decision"] == "NEEDS_CONFIRMATION"
 
-    # Step 4: explicit confirmation
-    r4 = client.post("/api/turn", json={"session_id": sid, "text": "Yes, delete it."})
-    assert r4.json()["gate"]["decision"] == "AUTHORIZED"
-    assert r4.json()["tool_result"]["result"]["simulated"] is True
+        r3 = client.post("/api/turn", json={"session_id": sid, "text": "Okay."})
+        assert r3.json()["gate"]["decision"] == "NEEDS_CONFIRMATION"
+
+        r4 = client.post("/api/turn", json={"session_id": sid, "text": "Yes, delete it."})
+        assert r4.json()["gate"]["decision"] == "AUTHORIZED"
+        assert r4.json()["tool_result"]["result"]["simulated"] is True
+    finally:
+        main_module.audit = orig_audit
+        main_module.processor = orig_proc
+        main_module.sessions = orig_sessions

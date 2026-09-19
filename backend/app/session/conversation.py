@@ -138,9 +138,10 @@ class ConversationTurnProcessor:
             tool_result = self.tools.execute(gate.action, gate.evidence)
             state.phase = Phase.COMPLETED
             self._log(state, "AUTHORIZED", None, tool_result)
-            detail = (tool_result["result"].get("deleted")
-                      or tool_result["result"].get("deployed")
-                      or tool_result["result"].get("transferred", "done"))
+            result = tool_result.get("result", {}) if tool_result else {}
+            detail = (result.get("deleted")
+                      or result.get("deployed")
+                      or result.get("transferred", "done"))
             return self._outcome(
                 state, reply=f"Authorized and executed. {detail} (simulated).",
                 gate=gate, tool_result=tool_result)
