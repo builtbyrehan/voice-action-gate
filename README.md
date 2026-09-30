@@ -716,12 +716,6 @@ Voice Action Gate adds the missing enforcement boundary between AI understanding
 
 ---
 
-## 🏷️ Suggested Project Tags
-
-`AI Security` · `Cybersecurity` · `Voice AI` · `Agentic AI` · `AI Agents` · `Authorization` · `FastAPI` · `Next.js` · `WebSockets` · `AssemblyAI` · `LLM` · `Auditability`
-
----
-
 <p align="center">
   <strong>Voice Action Gate</strong><br/>
   Safe, explicit, traceable execution for AI agents.
